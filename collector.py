@@ -7,16 +7,25 @@ from logger import start_logger, stop_logger, write_data
 
 ticker_symbol = None
 capture_duration = None
+start_time = None
+first_message_received = False
 
 def on_message(ws, message):
+    global start_time, first_message_received
+    
     data = json.loads(message)
     normalized_data = normalize_data(data)
     write_data(normalized_data)
     print(f"Normalized data: {normalized_data}")
+    
+    # Start timer on first message
+    if not first_message_received:
+        first_message_received = True
+        start_time = time.time()
+        print(f"First message received, starting {capture_duration}s timer")
 
 def on_error(ws, error):
     print(f"Error: {error}")
-    
 
 def on_close(ws, close_status_code, close_msg):
     print(f"WebSocket connection closed: {close_status_code} - {close_msg}")
@@ -60,7 +69,11 @@ def start_collector(ticker, duration):
     ws_thread.daemon = True
     ws_thread.start()
     
-    # Wait for the specified duration
+    # Wait for first message, then start timer
+    while not first_message_received:
+        time.sleep(0.1)
+    
+    # Wait for the specified duration after first message
     time.sleep(capture_duration)
     
     stop_logger()
@@ -69,5 +82,4 @@ def start_collector(ticker, duration):
     print(f"Data capture completed for {ticker_symbol}")
 
 if __name__ == "__main__":
-    # For direct execution, you can still use it with hardcoded values
     start_collector("btcusdt", "10")

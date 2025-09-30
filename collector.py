@@ -1,9 +1,9 @@
 import websocket
 import json
-import datetime
 import threading
 import time
 from normalizer import normalize_data
+from logger import start_logger, stop_logger, write_data
 
 ticker_symbol = None
 capture_duration = None
@@ -11,6 +11,7 @@ capture_duration = None
 def on_message(ws, message):
     data = json.loads(message)
     normalized_data = normalize_data(data)
+    write_data(normalized_data)
     print(f"Normalized data: {normalized_data}")
 
 def on_error(ws, error):
@@ -39,6 +40,7 @@ def on_pong(ws, message):
 
 def start_collector(ticker, duration):
     global ticker_symbol, capture_duration
+    start_logger()
     ticker_symbol = ticker.lower()
     capture_duration = int(duration)
     
@@ -61,6 +63,7 @@ def start_collector(ticker, duration):
     # Wait for the specified duration
     time.sleep(capture_duration)
     
+    stop_logger()
     # Close the WebSocket connection
     ws.close()
     print(f"Data capture completed for {ticker_symbol}")

@@ -1,1 +1,2 @@
 websocket-client==1.8.0
+ndjson==0.3.1

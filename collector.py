@@ -1,39 +1,35 @@
 import websocket
 import json
-import threading
 import datetime
+import threading
+import time
+from normalizer import normalize_data
 
-message_count = 0
+ticker_symbol = None
+capture_duration = None
 
 def on_message(ws, message):
-    global message_count
     data = json.loads(message)
-    message_count += 1
-    print(f"Received message: {message}")
+    normalized_data = normalize_data(data)
+    print(f"Normalized data: {normalized_data}")
 
 def on_error(ws, error):
     print(f"Error: {error}")
     
 
 def on_close(ws, close_status_code, close_msg):
-    time_now = datetime.datetime.now()
-    time_diff = time_now - start_time
-    print(f"Time taken: {time_diff}")
-    print(f"Message count: {message_count}")
-    print(f"Message rate: {message_count / time_diff.total_seconds()}")
     print(f"WebSocket connection closed: {close_status_code} - {close_msg}")
 
 def on_open(ws):
+    global ticker_symbol
     print("Connection opened")
     subscribe_message = {
         "method": "SUBSCRIBE",
-        "params": ["btcusdt@bookTicker"],
+        "params": [f"{ticker_symbol}@bookTicker"],
         "id": 1
     }
     ws.send(json.dumps(subscribe_message))
-    print(f"Subscribed to btcusdt@bookTicker")
-    global start_time
-    start_time = datetime.datetime.now()
+    print(f"Subscribed to {ticker_symbol}@bookTicker")
 
 def on_ping(ws, message):
     print(f"Received ping: {message}")
@@ -41,7 +37,13 @@ def on_ping(ws, message):
 def on_pong(ws, message):
     print(f"Received pong: {message}")
 
-if __name__ == "__main__":
+def start_collector(ticker, duration):
+    global ticker_symbol, capture_duration
+    ticker_symbol = ticker.lower()
+    capture_duration = int(duration)
+    
+    print(f"Starting collector for {ticker_symbol} for {capture_duration} seconds")
+    
     socket = 'wss://stream.binance.com:9443/ws'
     ws = websocket.WebSocketApp(socket,
                                 on_message=on_message,
@@ -50,4 +52,19 @@ if __name__ == "__main__":
                                 on_open=on_open,
                                 on_ping=on_ping,
                                 on_pong=on_pong)
-    ws.run_forever()
+    
+    # Start WebSocket in a separate thread
+    ws_thread = threading.Thread(target=ws.run_forever)
+    ws_thread.daemon = True
+    ws_thread.start()
+    
+    # Wait for the specified duration
+    time.sleep(capture_duration)
+    
+    # Close the WebSocket connection
+    ws.close()
+    print(f"Data capture completed for {ticker_symbol}")
+
+if __name__ == "__main__":
+    # For direct execution, you can still use it with hardcoded values
+    start_collector("btcusdt", "10")

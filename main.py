@@ -1,5 +1,6 @@
 import argparse
 import collector
+import metrics
 import json
 import os
 
@@ -13,6 +14,7 @@ def metrics_command(args):
         return
     
     print(f"Analyzing metrics for {args.filename}")
+    metrics.analyze_metrics(args.filename, args.epsilon)
     
 
 def main():
@@ -36,6 +38,7 @@ def main():
     # metrics subcommand
     metrics_parser = subparsers.add_parser('metrics', help='Analyze captured data metrics')
     metrics_parser.add_argument('--filename', '-f', required=True, help='Path to the data file')
+    metrics_parser.add_argument('--epsilon', '-e', required=False, type=float, help='Epsilon value for Ask≥Bid-ε check', default=1e-8)
     metrics_parser.set_defaults(func=metrics_command)
     
     # Parse arguments
